@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Контакты Виллы | Черногория</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='24' r='12' fill='%23f59e0b'/><path d='M8 44c8-6 16-6 24 0s16 6 24 0' fill='none' stroke='%230ea5e9' stroke-width='4' stroke-linecap='round'/><path d='M8 54c8-6 16-6 24 0s16 6 24 0' fill='none' stroke='%230284c7' stroke-width='4' stroke-linecap='round'/></svg>" type="image/svg+xml">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --adriatic-deep: #005b82; --adriatic-mid: #0085a1; --sand: #f5f0e6; --gold: #d4a934; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { font-family: 'Montserrat', sans-serif; height: 100%; overflow-x: hidden; }
+        body { background: linear-gradient(175deg, #4facfe 0%, #00c6fb 35%, #00b4d8 50%, #90e0ef 65%, #e0f7fa 80%, #fdfbf7 100%); color: #1a2a3a; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; position: relative; }
+        body::before { content: ''; position: absolute; top: 10%; left: 50%; width: 300px; height: 100px; background: rgba(255, 255, 255, 0.4); border-radius: 100px; filter: blur(40px); z-index: 0; transform: translateX(-50%); animation: cloudMove 20s infinite alternate; }
+        @keyframes cloudMove { 0% { transform: translateX(-60%); opacity: 0.3; } 100% { transform: translateX(-40%); opacity: 0.6; } }
+        .waves { position: fixed; bottom: 0; left: 0; width: 100%; height: 20vh; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="rgba(255, 255, 255, 0.4)"></path></svg>'); background-size: 1200px 100%; animation: wave 12s linear infinite; z-index: 0; pointer-events: none; }
+        @keyframes wave { 0% { background-position-x: 0; } 100% { background-position-x: 1200px; } }
+        .card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 20px 50px rgba(0, 91, 130, 0.15); width: 100%; max-width: 420px; padding: 32px 24px; position: relative; z-index: 1; animation: fadeInUp 0.8s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.2rem, 8vw, 3rem); font-weight: 700; color: var(--adriatic-deep); margin-bottom: 4px; }
+        .lang-subtitle { font-size: 1.1rem; color: var(--adriatic-mid); margin-bottom: 24px; font-weight: 500; }
+        .divider { width: 60px; height: 3px; background: var(--gold); margin: 0 auto 24px; border-radius: 2px; }
+        .phone-display { font-size: 1.5rem; font-weight: 700; color: var(--adriatic-deep); margin-bottom: 24px; letter-spacing: 1px; text-decoration: none; display: block; transition: color 0.3s; }
+        .phone-display:hover { color: var(--adriatic-mid); }
+        
+        /* Кнопки */
+        .btn-group { display: flex; flex-direction: column; gap: 12px; }
+        .btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; border: none; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .btn:active { transform: scale(0.97); }
+        .btn-call { background: var(--adriatic-deep); color: white; } .btn-call:hover { background: #004a6a; }
+        .btn-wa { background: #25D366; color: white; } .btn-wa:hover { background: #1da851; }
+        .btn-vb { background: #7360F2; color: white; } .btn-vb:hover { background: #5c4bd1; }
+        .btn-tg { background: #0088cc; color: white; } .btn-tg:hover { background: #006da3; }
+        .icon { width: 24px; height: 24px; fill: currentColor; flex-shrink: 0; }
+        
+        /* Виджет чата */
+        .chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 100; }
+        .chat-toggle-btn { width: 60px; height: 60px; border-radius: 50%; background: var(--gold); box-shadow: 0 4px 15px rgba(212, 169, 52, 0.4); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.3s, background 0.3s; }
+        .chat-toggle-btn:hover { transform: scale(1.1); background: #c49a2b; }
+        .chat-toggle-btn svg { width: 32px; height: 32px; fill: white; }
+        .chat-popup { position: absolute; bottom: 75px; right: 0; width: 320px; max-width: calc(100vw - 40px); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 20px; display: none; flex-direction: column; gap: 12px; animation: slideUp 0.3s ease-out; }
+        .chat-popup.active { display: flex; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-header { font-weight: 700; color: var(--adriatic-deep); margin-bottom: 5px; text-align: center; }
+        .chat-input { width: 100%; padding: 12px; border: 1px solid rgba(0,91,130,0.2); border-radius: 10px; font-family: inherit; font-size: 0.95rem; outline: none; }
+        .chat-input:focus { border-color: var(--adriatic-mid); }
+        
+        /* ОТСТУП ПОЛЯ ОТ КНОПКИ */
+        .chat-textarea { min-height: 80px; resize: none; margin-bottom: 20px; /* Добавленный отступ */ }
+        
+        /* ЦЕНТРИРОВАНИЕ КНОПКИ */
+        .send-btn { 
+            background: var(--adriatic-deep); 
+            color: white; 
+            border: none; 
+            padding: 14px 40px; 
+            border-radius: 100px; /* Скругленная форма */
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: background 0.3s, transform 0.1s; 
+            width: auto; /* Не на всю ширину */
+            align-self: center; /* Центрирование во flex-контейнере */
+            font-size: 0.95rem;
+            box-shadow: 0 4px 12px rgba(0, 91, 130, 0.3);
+        }
+        .send-btn:hover { background: var(--adriatic-mid); }
+        .send-btn:active { transform: scale(0.95); }
+        .send-btn:disabled { background: #ccc; cursor: default; box-shadow: none; }
+
+        .status-msg { font-size: 0.85rem; text-align: center; margin-top: 5px; color: var(--adriatic-mid); max-height: 150px; overflow-y: auto; background: #f9f9f9; padding: 8px; border-radius: 6px; word-break: break-word; }
+        .footer-info { margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(0, 91, 130, 0.1); color: #5a6a7a; font-size: 0.9rem; text-align: center; line-height: 1.6; }
+        
+        @media (max-width: 400px) { .card { padding: 24px 16px; } .btn { padding: 14px; font-size: 0.95rem; } .phone-display { font-size: 1.3rem; } .chat-widget { bottom: 15px; right: 15px; } }
+    </style>
+</head>
+<body>
+
+    <div class="waves"></div>
+
+    <div class="card">
+        <div style="text-align: center; margin-bottom: 10px;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d4a934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 10px;">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <h1>Контакт-лист</h1>
+            <div class="lang-subtitle">Contact List / Листа контаката</div>
+            <div class="divider"></div>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="tel:+38268023344" class="phone-display">+382 68 023 344</a>
+        </div>
+
+        <div class="btn-group">
+            <a href="tel:+38268023344" class="btn btn-call">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                Позвонить
+            </a>
+            <a href="https://wa.me/79823304187?text=Здравствуйте! Пишу по поводу бронирования виллы." class="btn btn-wa">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                WhatsApp
+            </a>
+            <a href="viber://chat?number=%2B79823304187" class="btn btn-vb">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M11.398.002C9.473.028 5.331.344 3.014 2.467 1.294 4.182.514 6.793.39 10.034c-.124 3.24-.102 9.31 5.694 10.963h.005l-.004 2.48s-.038.998.625 1.202c.78.244 1.232-.478 1.974-1.24.407-.422.97-1.04 1.397-1.514 3.85.326 6.812-.416 7.15-.526.78-.248 5.183-.79 5.907-6.456.74-5.836-.36-9.53-2.35-11.18l-.002-.002c-.604-.55-3.06-2.14-8.734-2.36 0 0-.422-.01-1.062-.003zm.166 1.723c.514-.003.876.006.876.006 4.674.17 6.878 1.488 7.37 1.902 1.62 1.338 2.452 4.54 1.842 9.27-.59 4.617-4.092 4.923-4.744 5.13-.276.086-2.824.7-6.106.48 0 0-2.42 2.88-3.174 3.63-.118.118-.255.165-.347.144-.128-.03-.166-.168-.163-.37l.02-3.943c-4.762-1.31-4.485-6.282-4.38-8.872.105-2.59.733-4.712 2.164-6.09 1.914-1.748 5.293-2.048 6.444-2.187zm.192 2.622c-.1 0-.176.078-.176.178v5.37c0 .1.076.178.176.178h.76c.1 0 .178-.078.178-.178v-5.37c0-.1-.078-.178-.178-.178h-.76zm-2.79.89c-.1 0-.178.078-.178.178v3.59c0 .1.078.178.178.178h.76c.1 0 .178-.078.178-.178v-3.59c0-.1-.078-.178-.178-.178h-.76zm5.58 0c-.1 0-.178.078-.178.178v3.59c0 .1.078.178.178.178h.76c.1 0 .18-.078.18-.178v-3.59c0-.1-.08-.178-.18-.178h-.76zM8.077 9.41c-.1 0-.178.08-.178.18v.76c0 .1.078.178.178.178h.76c.1 0 .178-.078.178-.178v-.76c0-.1-.078-.18-.178-.18h-.76zm8.37 0c-.1 0-.178.08-.178.18v.76c0 .1.078.178.178.178h.76c.1 0 .178-.078.178-.178v-.76c0-.1-.078-.18-.178-.18h-.76z"/></svg>
+                Viber
+            </a>
+            <a href="tg://resolve?phone=79823304187" class="btn btn-tg">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                Telegram
+            </a>
+        </div>
+
+        <div class="footer-info">
+            <p style="font-weight: 600; color: var(--adriatic-deep); margin-bottom: 4px;">Вилла на берегу Адриатики</p>
+            <p>Черногория</p>
+        </div>
+    </div>
+
+    <!-- Виджет Чата -->
+    <div class="chat-widget">
+        <button class="chat-toggle-btn" id="chatToggle" aria-label="Открыть чат">
+            <svg viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                <path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/>
+            </svg>
+        </button>
+
+        <div class="chat-popup" id="chatPopup">
+            <div class="chat-header">Напишите нам</div>
+            <form id="chatForm">
+                <textarea name="comment" class="chat-input chat-textarea" placeholder="Ваше сообщение..." autocomplete="off" required></textarea>
+                <button type="submit" class="send-btn" id="sendBtn">Отправить</button>
+            </form>
+            <div class="status-msg" id="statusMsg"></div>
+        </div>
+    </div>
+
+    <script>
+        // ==================================================
+        // НАСТРОЙКИ
+        // ==================================================
+        const TG_TOKEN = "8679561839:AAFC8HU9xWgzR0baGXM9wGvm5zVCbw11wr4";
+        const TG_CHAT_ID = "385077469";
+        
+        // Если api.telegram.org заблокирован провайдером, используйте прокси.
+        // Раскомментируйте одну из строк ниже, если не работает:
+        // const API_HOST = "https://api.telegg.ru";
+        const API_HOST = "https://api.telegram.org";
+        // ==================================================
+
+        const toggleBtn = document.getElementById('chatToggle');
+        const popup = document.getElementById('chatPopup');
+        const form = document.getElementById('chatForm');
+        const statusMsg = document.getElementById('statusMsg');
+        const sendBtn = document.getElementById('sendBtn');
+        const commentInput = document.querySelector('textarea[name="comment"]');
+
+        toggleBtn.addEventListener('click', () => { popup.classList.toggle('active'); });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = commentInput.value;
+            if (!message.trim()) return;
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Отправка...';
+            statusMsg.textContent = '';
+            statusMsg.style.color = 'blue';
+
+            const text = `Сообщение с сайта Виллы:\n\nИмя: Гость\nСообщение: ${message}`;
+            const url = `${API_HOST}/bot${TG_TOKEN}/sendMessage`;
+
+            // ИСПОЛЬЗУЕМ FormData (Избегаем запрос OPTIONS)
+            const formData = new FormData();
+            formData.append('chat_id', TG_CHAT_ID);
+            formData.append('text', text);
+
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.ok) {
+                    statusMsg.style.color = '#25D366';
+                    statusMsg.textContent = 'Отправлено! Мы скоро ответим.';
+                    form.reset();
+                } else {
+                    statusMsg.style.color = 'red';
+                    statusMsg.textContent = `Ошибка API: ${data.description || 'Неизвестно'}`;
+                }
+            })
+            .catch(error => {
+                statusMsg.style.color = 'red';
+                statusMsg.textContent = 'Ошибка сети. Попробуйте VPN.';
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Отправить';
+            });
+        });
+    </script>
+</body>
+</html>
