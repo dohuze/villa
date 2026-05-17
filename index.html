@@ -81,17 +81,15 @@
             .chat-messages { height: 300px; }
         }
         
-        /* Стили для скроллбара */
         .chat-messages::-webkit-scrollbar { width: 5px; }
         .chat-messages::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 5px; }
         .chat-messages::-webkit-scrollbar-thumb { background: var(--adriatic-mid); border-radius: 5px; }
         
-        /* Индикатор набора текста */
-        .typing-indicator { display: flex; gap: 3px; padding: 8px 12px; background: white; border-radius: 15px; width: fit-content; }
-        .typing-indicator span { width: 6px; height: 6px; background: #999; border-radius: 50%; animation: typing 1.4s infinite; }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); background: #c49a2b; }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -177,13 +175,12 @@
         // ==================================================
         const TG_TOKEN = "8802116829:AAFCAq4E4YcuVErSn0p26ycWYGVcnBDGO1w";
         const ADMIN_CHAT_ID = "1420398477";
-        const API_HOST = "https://api.telegg.ru"; // Прокси для России
+        const API_HOST = "https://api.telegram.org";
         
         // ==================================================
         // УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЕМ
         // ==================================================
         
-        // Уникальный ID пользователя (хранится в localStorage)
         function getOrCreateUserId() {
             let userId = localStorage.getItem('chat_user_id');
             if (!userId) {
@@ -194,16 +191,10 @@
         }
         
         const userId = getOrCreateUserId();
-        
-        // Хранилище сообщений (в памяти)
         let displayedMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
         let lastUpdateId = parseInt(localStorage.getItem('chat_last_update_id') || '0');
         let pollingInterval = null;
-        let isTyping = false;
-        
-        // ==================================================
-        // ОТОБРАЖЕНИЕ СООБЩЕНИЙ
-        // ==================================================
+        let processedReplies = JSON.parse(localStorage.getItem('processed_replies') || '[]');
         
         function formatTime() {
             return new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -215,7 +206,7 @@
             messageDiv.className = `message ${sender === 'user' ? 'user-message' : 'bot-message'}`;
             
             messageDiv.innerHTML = `
-                ${message}
+                ${escapeHtml(message)}
                 <div class="message-time">${formatTime()}</div>
             `;
             
@@ -230,12 +221,17 @@
                     time: formatTime()
                 });
                 
-                // Сохраняем только последние 50 сообщений
                 if (displayedMessages.length > 50) {
                     displayedMessages = displayedMessages.slice(-50);
                 }
                 localStorage.setItem('chat_messages', JSON.stringify(displayedMessages));
             }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
         
         function restoreMessages() {
@@ -249,7 +245,7 @@
                     const messageDiv = document.createElement('div');
                     messageDiv.className = `message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`;
                     messageDiv.innerHTML = `
-                        ${msg.message}
+                        ${escapeHtml(msg.message)}
                         <div class="message-time">${msg.time}</div>
                     `;
                     messagesDiv.appendChild(messageDiv);
@@ -258,89 +254,53 @@
             }
         }
         
-        function showTypingIndicator() {
-            if (isTyping) return;
-            isTyping = true;
-            
-            const messagesDiv = document.getElementById('chatMessages');
-            const indicator = document.createElement('div');
-            indicator.className = 'typing-indicator';
-            indicator.id = 'typingIndicator';
-            indicator.innerHTML = '<span></span><span></span><span></span>';
-            messagesDiv.appendChild(indicator);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-        
-        function hideTypingIndicator() {
-            const indicator = document.getElementById('typingIndicator');
-            if (indicator) indicator.remove();
-            isTyping = false;
-        }
-        
         // ==================================================
-        // ОТПРАВКА СООБЩЕНИЯ АДМИНИСТРАТОРУ
+        // ОТПРАВКА (через FormData - без OPTIONS)
         // ==================================================
         
         async function sendToAdmin(message) {
-            const timestamp = new Date().toLocaleString('ru-RU', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            });
-            
-            // Получаем информацию о пользователе
-            const userAgent = navigator.userAgent;
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+            const timestamp = new Date().toLocaleString('ru-RU');
+            const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
             const device = isMobile ? '📱 Мобильное устройство' : '💻 Компьютер';
             
-            const text = `🏠 НОВОЕ СООБЩЕНИЕ ИЗ ЧАТА НА САЙТЕ\n\n` +
-                         `👤 ID пользователя: ${userId}\n` +
+            const text = `🏠 НОВОЕ СООБЩЕНИЕ\n\n` +
+                         `👤 ID: ${userId}\n` +
                          `📝 Сообщение: ${message}\n` +
                          `🕐 Время: ${timestamp}\n` +
-                         `📱 Устройство: ${device}\n` +
-                         `🌐 Браузер: ${navigator.userAgent.split(' ').slice(-2).join(' ')}\n\n` +
-                         `❗ КАК ОТВЕТИТЬ:\n` +
-                         `Просто отправьте сообщение в этот чат с тегом:\n` +
-                         `[${userId}] Ваш ответ\n\n` +
-                         `Пример: [${userId}] Добрый день! Стоимость аренды 100€ в сутки.`;
+                         `📱 Устройство: ${device}\n\n` +
+                         `❗ Для ответа отправьте:\n[${userId}] Ваш ответ`;
             
             try {
+                const formData = new FormData();
+                formData.append('chat_id', ADMIN_CHAT_ID);
+                formData.append('text', text);
+                
                 const response = await fetch(`${API_HOST}/bot${TG_TOKEN}/sendMessage`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: ADMIN_CHAT_ID,
-                        text: text,
-                        parse_mode: 'HTML',
-                        disable_web_page_preview: true
-                    })
+                    body: formData
                 });
                 
                 const data = await response.json();
                 return data.ok;
             } catch (error) {
-                console.error('Ошибка отправки:', error);
+                console.error('Ошибка:', error);
                 return false;
             }
         }
         
         // ==================================================
-        // ПОЛУЧЕНИЕ ОТВЕТОВ ОТ АДМИНИСТРАТОРА
+        // ПОЛУЧЕНИЕ ОТВЕТОВ (GET запрос - без OPTIONS)
         // ==================================================
         
         async function checkForReplies() {
             try {
-                const response = await fetch(`${API_HOST}/bot${TG_TOKEN}/getUpdates`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        offset: lastUpdateId,
-                        timeout: 30
-                    })
-                });
+                const response = await fetch(`${API_HOST}/bot${TG_TOKEN}/getUpdates?offset=${lastUpdateId}&timeout=25`);
+                
+                if (!response.ok) return;
                 
                 const data = await response.json();
                 
-                if (data.ok && data.result && data.result.length > 0) {
+                if (data.ok && data.result) {
                     for (const update of data.result) {
                         lastUpdateId = update.update_id + 1;
                         localStorage.setItem('chat_last_update_id', lastUpdateId);
@@ -348,70 +308,40 @@
                         const message = update.message?.text;
                         const messageId = update.message?.message_id;
                         
-                        if (message && message.includes(`[${userId}]`)) {
-                            // Извлекаем ответ администратора
+                        if (message && message.includes(`[${userId}]`) && !processedReplies.includes(messageId)) {
                             let reply = message.replace(`[${userId}]`, '').trim();
-                            
-                            // Удаляем возможные дублирования тега
                             reply = reply.replace(/\[user_\d+_[a-z0-9]+\]\s*/g, '').trim();
                             
-                            if (reply && !isDuplicateReply(reply, messageId)) {
+                            if (reply) {
                                 addMessageToChat('bot', reply);
-                                markReplyAsProcessed(messageId);
+                                processedReplies.push(messageId);
+                                if (processedReplies.length > 100) processedReplies = processedReplies.slice(-100);
+                                localStorage.setItem('processed_replies', JSON.stringify(processedReplies));
                                 
-                                // Воспроизводим звук уведомления (если страница не активна)
-                                if (document.hidden) {
-                                    playNotificationSound();
-                                }
-                                
-                                // Обновляем статус
                                 const statusDiv = document.getElementById('chatStatus');
-                                statusDiv.innerHTML = '✓ Новый ответ! 👆';
+                                statusDiv.innerHTML = '✓ Новый ответ!';
                                 statusDiv.style.color = '#25D366';
                                 setTimeout(() => {
                                     statusDiv.innerHTML = '💬 Мы онлайн, отвечаем быстро';
                                     statusDiv.style.color = '#666';
                                 }, 3000);
+                                
+                                const toggleBtn = document.getElementById('chatToggle');
+                                toggleBtn.style.animation = 'pulse 0.5s';
+                                setTimeout(() => {
+                                    toggleBtn.style.animation = '';
+                                }, 500);
                             }
                         }
                     }
                 }
             } catch (error) {
-                console.error('Ошибка получения сообщений:', error);
+                console.error('Ошибка получения:', error);
             }
-        }
-        
-        // Хранилище обработанных сообщений
-        let processedReplies = JSON.parse(localStorage.getItem('processed_replies') || '[]');
-        
-        function isDuplicateReply(reply, messageId) {
-            return processedReplies.includes(messageId);
-        }
-        
-        function markReplyAsProcessed(messageId) {
-            processedReplies.push(messageId);
-            if (processedReplies.length > 100) {
-                processedReplies = processedReplies.slice(-100);
-            }
-            localStorage.setItem('processed_replies', JSON.stringify(processedReplies));
-        }
-        
-        function playNotificationSound() {
-            try {
-                const audio = new Audio('data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==');
-                audio.play().catch(e => console.log('Звук не воспроизведен'));
-            } catch(e) {}
-            
-            // Визуальное уведомление
-            const toggleBtn = document.getElementById('chatToggle');
-            toggleBtn.style.animation = 'none';
-            setTimeout(() => {
-                toggleBtn.style.animation = 'pulse 0.5s';
-            }, 10);
         }
         
         // ==================================================
-        // ОБРАБОТЧИК ОТПРАВКИ СООБЩЕНИЙ ПОЛЬЗОВАТЕЛЕМ
+        // ОТПРАВКА СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЕМ
         // ==================================================
         
         async function sendUserMessage() {
@@ -420,35 +350,29 @@
             
             if (!message) return;
             
-            // Отключаем кнопку на время отправки
             const sendBtn = document.getElementById('sendChatMsg');
             sendBtn.disabled = true;
             sendBtn.textContent = '⏳';
             
-            // Добавляем сообщение в чат
             addMessageToChat('user', message);
             input.value = '';
             
-            // Обновляем статус
             const statusDiv = document.getElementById('chatStatus');
             statusDiv.innerHTML = '⏳ Отправка...';
             statusDiv.style.color = '#ff9800';
             
-            // Отправляем администратору
             const success = await sendToAdmin(message);
             
             if (success) {
-                statusDiv.innerHTML = '✓ Отправлено! Ожидайте ответа...';
+                statusDiv.innerHTML = '✓ Отправлено! Ожидайте ответ...';
                 statusDiv.style.color = '#25D366';
-                
                 setTimeout(() => {
                     statusDiv.innerHTML = '💬 Мы онлайн, отвечаем быстро';
                     statusDiv.style.color = '#666';
                 }, 3000);
             } else {
-                statusDiv.innerHTML = '❌ Ошибка. Пожалуйста, позвоните по телефону';
+                statusDiv.innerHTML = '❌ Ошибка. Позвоните по телефону';
                 statusDiv.style.color = 'red';
-                
                 setTimeout(() => {
                     statusDiv.innerHTML = '💬 Мы онлайн, отвечаем быстро';
                     statusDiv.style.color = '#666';
@@ -460,15 +384,9 @@
         }
         
         // ==================================================
-        // ИНИЦИАЛИЗАЦИЯ И УПРАВЛЕНИЕ
+        // ИНИЦИАЛИЗАЦИЯ
         // ==================================================
         
-        function startPolling() {
-            if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(checkForReplies, 5000);
-        }
-        
-        // Обработчики событий
         document.getElementById('chatToggle').addEventListener('click', () => {
             const popup = document.getElementById('chatPopup');
             popup.classList.toggle('active');
@@ -482,43 +400,15 @@
         });
         
         document.getElementById('sendChatMsg').addEventListener('click', sendUserMessage);
-        
         document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendUserMessage();
-            }
+            if (e.key === 'Enter') sendUserMessage();
         });
         
-        // Восстанавливаем сообщения при загрузке
         restoreMessages();
+        setInterval(checkForReplies, 5000);
         
-        // Запускаем проверку ответов
-        startPolling();
-        
-        // Обновляем статус, если окно становится активным
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                checkForReplies();
-                const statusDiv = document.getElementById('chatStatus');
-                statusDiv.innerHTML = '💬 Онлайн, ждем ваших вопросов';
-                setTimeout(() => {
-                    statusDiv.innerHTML = '💬 Мы онлайн, отвечаем быстро';
-                }, 2000);
-            }
-        });
-        
-        // Периодически обновляем статус соединения
-        setInterval(() => {
-            if (navigator.onLine) {
-                const statusDiv = document.getElementById('chatStatus');
-                if (!statusDiv.innerHTML.includes('Ошибка')) {
-                    statusDiv.style.color = '#666';
-                }
-            }
-        }, 30000);
-        
-        console.log('Чат инициализирован. Ваш ID:', userId);
-        console.log('Чтобы ответить пользователю, отправьте в Telegram: [' + userId + '] Ваш ответ');
+        console.log('✅ Чат работает! Ваш ID:', userId);
+        console.log('📝 Для ответа отправьте в Telegram: [' + userId + '] Ваш текст');
     </script>
 </body>
 </html>
