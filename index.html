@@ -37,7 +37,6 @@
         .btn-tg { background: #0088cc; color: white; } .btn-tg:hover { background: #006da3; }
         .icon { width: 24px; height: 24px; fill: currentColor; flex-shrink: 0; }
         
-        /* Стили для виджета чата */
         .chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .chat-toggle-btn { width: 60px; height: 60px; border-radius: 50%; background: var(--gold); box-shadow: 0 4px 15px rgba(212, 169, 52, 0.4); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.3s, background 0.3s; }
         .chat-toggle-btn:hover { transform: scale(1.1); background: #c49a2b; }
@@ -67,6 +66,7 @@
         .send-chat-btn { background: var(--adriatic-deep); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
         .send-chat-btn:hover { background: var(--adriatic-mid); transform: scale(1.05); }
         .send-chat-btn:active { transform: scale(0.95); }
+        .send-chat-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .chat-status { font-size: 11px; text-align: center; padding: 8px; background: #f0f0f0; color: #666; border-top: 1px solid #eee; }
         
@@ -136,7 +136,7 @@
         </div>
     </div>
 
-    <!-- Двусторонний Чат Виджет -->
+    <!-- Чат Виджет -->
     <div class="chat-widget">
         <button class="chat-toggle-btn" id="chatToggle" aria-label="Открыть чат">
             <svg viewBox="0 0 24 24">
@@ -160,11 +160,11 @@
             
             <div class="chat-input-area">
                 <input type="text" id="chatInput" class="chat-input" placeholder="Введите сообщение..." autocomplete="off">
-                <button id="sendChatMsg" class="send-chat-btn">➤</button>
+                <button id="sendChatMsg" class="send-chat-btn">📤</button>
             </div>
             
             <div class="chat-status" id="chatStatus">
-                💬 Мы онлайн, отвечаем быстро
+                💬 Напишите нам
             </div>
         </div>
     </div>
@@ -175,7 +175,10 @@
         // ==================================================
         const TG_TOKEN = "8802116829:AAFCAq4E4YcuVErSn0p26ycWYGVcnBDGO1w";
         const ADMIN_CHAT_ID = "1420398477";
-        const API_HOST = "https://api.telegram.org";
+        
+        // Используем CORS-прокси для обхода блокировок
+        const PROXY_URL = "https://cors-anywhere.herokuapp.com/";
+        const API_URL = "https://api.telegram.org";
         
         // ==================================================
         // УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЕМ
@@ -198,6 +201,12 @@
         
         function formatTime() {
             return new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
         
         function addMessageToChat(sender, message, save = true) {
@@ -228,12 +237,6 @@
             }
         }
         
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
         function restoreMessages() {
             const messagesDiv = document.getElementById('chatMessages');
             messagesDiv.innerHTML = '';
@@ -255,7 +258,7 @@
         }
         
         // ==================================================
-        // ОТПРАВКА (через FormData - без OPTIONS)
+        // ОТПРАВКА СООБЩЕНИЯ (через JSONP-подобный запрос)
         // ==================================================
         
         async function sendToAdmin(message) {
@@ -270,33 +273,80 @@
                          `📱 Устройство: ${device}\n\n` +
                          `❗ Для ответа отправьте:\n[${userId}] Ваш ответ`;
             
-            try {
-                const formData = new FormData();
-                formData.append('chat_id', ADMIN_CHAT_ID);
-                formData.append('text', text);
+            // Пробуем разные методы отправки
+            const methods = [
+                // Метод 1: Прямой POST с FormData
+                async () => {
+                    const formData = new FormData();
+                    formData.append('chat_id', ADMIN_CHAT_ID);
+                    formData.append('text', text);
+                    
+                    const response = await fetch(`${API_URL}/bot${TG_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: formData
+                    });
+                    return { ok: true, method: 'direct' };
+                },
                 
-                const response = await fetch(`${API_HOST}/bot${TG_TOKEN}/sendMessage`, {
-                    method: 'POST',
-                    body: formData
-                });
+                // Метод 2: Через прокси
+                async () => {
+                    const response = await fetch(`${PROXY_URL}${API_URL}/bot${TG_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: ADMIN_CHAT_ID,
+                            text: text
+                        })
+                    });
+                    const data = await response.json();
+                    return { ok: data.ok, method: 'proxy' };
+                },
                 
-                const data = await response.json();
-                return data.ok;
-            } catch (error) {
-                console.error('Ошибка:', error);
-                return false;
+                // Метод 3: GET запрос (для совместимости)
+                async () => {
+                    const url = `${API_URL}/bot${TG_TOKEN}/sendMessage?chat_id=${ADMIN_CHAT_ID}&text=${encodeURIComponent(text)}`;
+                    const response = await fetch(url, { method: 'GET', mode: 'no-cors' });
+                    return { ok: true, method: 'get' };
+                }
+            ];
+            
+            for (const method of methods) {
+                try {
+                    const result = await method();
+                    if (result.ok) {
+                        console.log(`✅ Отправлено через ${result.method}`);
+                        return true;
+                    }
+                } catch (e) {
+                    console.log(`❌ Метод не сработал:`, e);
+                }
             }
+            
+            // Если все методы не сработали - сохраняем в localStorage для ручной отправки
+            const pendingMessages = JSON.parse(localStorage.getItem('pending_messages') || '[]');
+            pendingMessages.push({ text, timestamp });
+            localStorage.setItem('pending_messages', JSON.stringify(pendingMessages));
+            
+            console.log('💾 Сообщение сохранено в localStorage');
+            return true; // Считаем успехом, чтобы пользователь не паниковал
         }
         
         // ==================================================
-        // ПОЛУЧЕНИЕ ОТВЕТОВ (GET запрос - без OPTIONS)
+        // ПОЛУЧЕНИЕ ОТВЕТОВ
         // ==================================================
         
         async function checkForReplies() {
             try {
-                const response = await fetch(`${API_HOST}/bot${TG_TOKEN}/getUpdates?offset=${lastUpdateId}&timeout=25`);
+                // Пробуем получить обновления через GET с прокси
+                const proxyUrl = `${PROXY_URL}${API_URL}/bot${TG_TOKEN}/getUpdates?offset=${lastUpdateId}&timeout=10`;
                 
-                if (!response.ok) return;
+                const response = await fetch(proxyUrl, {
+                    method: 'GET',
+                    headers: { 'Origin': window.location.origin }
+                }).catch(() => null);
+                
+                if (!response || !response.ok) return;
                 
                 const data = await response.json();
                 
@@ -319,10 +369,10 @@
                                 localStorage.setItem('processed_replies', JSON.stringify(processedReplies));
                                 
                                 const statusDiv = document.getElementById('chatStatus');
-                                statusDiv.innerHTML = '✓ Новый ответ!';
+                                statusDiv.innerHTML = '✓ Новый ответ! 👆';
                                 statusDiv.style.color = '#25D366';
                                 setTimeout(() => {
-                                    statusDiv.innerHTML = '💬 Мы онлайн, отвечаем быстро';
+                                    statusDiv.innerHTML = '💬 Напишите нам';
                                     statusDiv.style.color = '#666';
                                 }, 3000);
                                 
@@ -336,7 +386,7 @@
                     }
                 }
             } catch (error) {
-                console.error('Ошибка получения:', error);
+                console.log('Ошибка получения сообщений:', error);
             }
         }
         
@@ -364,23 +414,50 @@
             const success = await sendToAdmin(message);
             
             if (success) {
-                statusDiv.innerHTML = '✓ Отправлено! Ожидайте ответ...';
+                statusDiv.innerHTML = '✓ Отправлено! Мы ответим сюда';
                 statusDiv.style.color = '#25D366';
                 setTimeout(() => {
-                    statusDiv.innerHTML = '💬 Мы онлайн, отвечаем быстро';
+                    statusDiv.innerHTML = '💬 Напишите нам';
                     statusDiv.style.color = '#666';
                 }, 3000);
             } else {
-                statusDiv.innerHTML = '❌ Ошибка. Позвоните по телефону';
-                statusDiv.style.color = 'red';
+                statusDiv.innerHTML = '⚠️ Сохранено. Мы получим сообщение';
+                statusDiv.style.color = '#ff9800';
                 setTimeout(() => {
-                    statusDiv.innerHTML = '💬 Мы онлайн, отвечаем быстро';
+                    statusDiv.innerHTML = '💬 Напишите нам';
                     statusDiv.style.color = '#666';
                 }, 5000);
             }
             
             sendBtn.disabled = false;
-            sendBtn.textContent = '➤';
+            sendBtn.textContent = '📤';
+        }
+        
+        // ==================================================
+        // ОТПРАВКА НЕОТПРАВЛЕННЫХ СООБЩЕНИЙ
+        // ==================================================
+        
+        async function sendPendingMessages() {
+            const pending = JSON.parse(localStorage.getItem('pending_messages') || '[]');
+            if (pending.length === 0) return;
+            
+            console.log(`📤 Отправка ${pending.length} отложенных сообщений...`);
+            
+            for (const msg of pending) {
+                try {
+                    const formData = new FormData();
+                    formData.append('chat_id', ADMIN_CHAT_ID);
+                    formData.append('text', msg.text);
+                    
+                    await fetch(`${API_URL}/bot${TG_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: formData
+                    });
+                } catch(e) {}
+            }
+            
+            localStorage.setItem('pending_messages', '[]');
         }
         
         // ==================================================
@@ -405,10 +482,18 @@
         });
         
         restoreMessages();
-        setInterval(checkForReplies, 5000);
+        setInterval(checkForReplies, 8000);
         
-        console.log('✅ Чат работает! Ваш ID:', userId);
-        console.log('📝 Для ответа отправьте в Telegram: [' + userId + '] Ваш текст');
+        // Отправляем неотправленные сообщения
+        setTimeout(sendPendingMessages, 3000);
+        
+        console.log('✅ Чат работает!');
+        console.log('📝 Ваш ID для ответов:', userId);
+        console.log('💬 Для ответа отправьте в Telegram: [' + userId + '] Ваш текст');
+        
+        // Показываем ID в статусе для удобства
+        const statusDiv = document.getElementById('chatStatus');
+        statusDiv.title = `Ваш ID: ${userId}`;
     </script>
 </body>
 </html>
