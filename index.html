@@ -63,10 +63,23 @@
         .chat-input-area { padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
         .chat-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 10px; font-family: inherit; font-size: 0.95rem; outline: none; transition: border-color 0.3s; }
         .chat-input:focus { border-color: var(--adriatic-mid); }
-        .send-chat-btn { background: var(--adriatic-deep); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
-        .send-chat-btn:hover { background: var(--adriatic-mid); transform: scale(1.05); }
-        .send-chat-btn:active { transform: scale(0.95); }
-        .send-chat-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .send-chat-btn { 
+            background: var(--adriatic-deep); 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            white-space: nowrap;
+            min-width: 100px;
+        }
+        .send-chat-btn:hover { background: var(--adriatic-mid); transform: scale(1.02); }
+        .send-chat-btn:active { transform: scale(0.98); }
+        .send-chat-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         
         .chat-status { font-size: 11px; text-align: center; padding: 8px; background: #f0f0f0; color: #666; border-top: 1px solid #eee; }
         
@@ -79,6 +92,7 @@
             .chat-widget { bottom: 15px; right: 15px; }
             .chat-popup { width: calc(100vw - 30px); right: 0; }
             .chat-messages { height: 300px; }
+            .send-chat-btn { min-width: 80px; padding: 10px 12px; font-size: 0.85rem; }
         }
         
         .chat-messages::-webkit-scrollbar { width: 5px; }
@@ -160,7 +174,7 @@
             
             <div class="chat-input-area">
                 <input type="text" id="chatInput" class="chat-input" placeholder="Введите сообщение..." autocomplete="off">
-                <button id="sendChatMsg" class="send-chat-btn">📤</button>
+                <button id="sendChatMsg" class="send-chat-btn">Отправить</button>
             </div>
             
             <div class="chat-status" id="chatStatus">
@@ -175,9 +189,6 @@
         // ==================================================
         const TG_TOKEN = "8802116829:AAFCAq4E4YcuVErSn0p26ycWYGVcnBDGO1w";
         const ADMIN_CHAT_ID = "1420398477";
-
-        //const TG_TOKEN = "8679561839:AAFC8HU9xWgzR0baGXM9wGvm5zVCbw11wr4";
-        //const TG_CHAT_ID = "385077469";
         
         // Используем CORS-прокси для обхода блокировок
         const PROXY_URL = "https://cors-anywhere.herokuapp.com/";
@@ -261,7 +272,7 @@
         }
         
         // ==================================================
-        // ОТПРАВКА СООБЩЕНИЯ (через JSONP-подобный запрос)
+        // ОТПРАВКА СООБЩЕНИЯ
         // ==================================================
         
         async function sendToAdmin(message) {
@@ -276,63 +287,21 @@
                          `📱 Устройство: ${device}\n\n` +
                          `❗ Для ответа отправьте:\n[${userId}] Ваш ответ`;
             
-            // Пробуем разные методы отправки
-            const methods = [
-                // Метод 1: Прямой POST с FormData
-                async () => {
-                    const formData = new FormData();
-                    formData.append('chat_id', ADMIN_CHAT_ID);
-                    formData.append('text', text);
-                    
-                    const response = await fetch(`${API_URL}/bot${TG_TOKEN}/sendMessage`, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: formData
-                    });
-                    return { ok: true, method: 'direct' };
-                },
+            try {
+                const formData = new FormData();
+                formData.append('chat_id', ADMIN_CHAT_ID);
+                formData.append('text', text);
                 
-                // Метод 2: Через прокси
-                async () => {
-                    const response = await fetch(`${PROXY_URL}${API_URL}/bot${TG_TOKEN}/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            chat_id: ADMIN_CHAT_ID,
-                            text: text
-                        })
-                    });
-                    const data = await response.json();
-                    return { ok: data.ok, method: 'proxy' };
-                },
-                
-                // Метод 3: GET запрос (для совместимости)
-                async () => {
-                    const url = `${API_URL}/bot${TG_TOKEN}/sendMessage?chat_id=${ADMIN_CHAT_ID}&text=${encodeURIComponent(text)}`;
-                    const response = await fetch(url, { method: 'GET', mode: 'no-cors' });
-                    return { ok: true, method: 'get' };
-                }
-            ];
-            
-            for (const method of methods) {
-                try {
-                    const result = await method();
-                    if (result.ok) {
-                        console.log(`✅ Отправлено через ${result.method}`);
-                        return true;
-                    }
-                } catch (e) {
-                    console.log(`❌ Метод не сработал:`, e);
-                }
+                const response = await fetch(`${API_URL}/bot${TG_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: formData
+                });
+                return true;
+            } catch (error) {
+                console.log('Ошибка отправки:', error);
+                return false;
             }
-            
-            // Если все методы не сработали - сохраняем в localStorage для ручной отправки
-            const pendingMessages = JSON.parse(localStorage.getItem('pending_messages') || '[]');
-            pendingMessages.push({ text, timestamp });
-            localStorage.setItem('pending_messages', JSON.stringify(pendingMessages));
-            
-            console.log('💾 Сообщение сохранено в localStorage');
-            return true; // Считаем успехом, чтобы пользователь не паниковал
         }
         
         // ==================================================
@@ -341,15 +310,9 @@
         
         async function checkForReplies() {
             try {
-                // Пробуем получить обновления через GET с прокси
-                const proxyUrl = `${PROXY_URL}${API_URL}/bot${TG_TOKEN}/getUpdates?offset=${lastUpdateId}&timeout=10`;
+                const response = await fetch(`${API_URL}/bot${TG_TOKEN}/getUpdates?offset=${lastUpdateId}&timeout=10`);
                 
-                const response = await fetch(proxyUrl, {
-                    method: 'GET',
-                    headers: { 'Origin': window.location.origin }
-                }).catch(() => null);
-                
-                if (!response || !response.ok) return;
+                if (!response.ok) return;
                 
                 const data = await response.json();
                 
@@ -405,7 +368,7 @@
             
             const sendBtn = document.getElementById('sendChatMsg');
             sendBtn.disabled = true;
-            sendBtn.textContent = '⏳';
+            sendBtn.textContent = 'Отправка...';
             
             addMessageToChat('user', message);
             input.value = '';
@@ -433,34 +396,7 @@
             }
             
             sendBtn.disabled = false;
-            sendBtn.textContent = '📤';
-        }
-        
-        // ==================================================
-        // ОТПРАВКА НЕОТПРАВЛЕННЫХ СООБЩЕНИЙ
-        // ==================================================
-        
-        async function sendPendingMessages() {
-            const pending = JSON.parse(localStorage.getItem('pending_messages') || '[]');
-            if (pending.length === 0) return;
-            
-            console.log(`📤 Отправка ${pending.length} отложенных сообщений...`);
-            
-            for (const msg of pending) {
-                try {
-                    const formData = new FormData();
-                    formData.append('chat_id', ADMIN_CHAT_ID);
-                    formData.append('text', msg.text);
-                    
-                    await fetch(`${API_URL}/bot${TG_TOKEN}/sendMessage`, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: formData
-                    });
-                } catch(e) {}
-            }
-            
-            localStorage.setItem('pending_messages', '[]');
+            sendBtn.textContent = 'Отправить';
         }
         
         // ==================================================
@@ -487,14 +423,10 @@
         restoreMessages();
         setInterval(checkForReplies, 8000);
         
-        // Отправляем неотправленные сообщения
-        setTimeout(sendPendingMessages, 3000);
-        
         console.log('✅ Чат работает!');
         console.log('📝 Ваш ID для ответов:', userId);
         console.log('💬 Для ответа отправьте в Telegram: [' + userId + '] Ваш текст');
         
-        // Показываем ID в статусе для удобства
         const statusDiv = document.getElementById('chatStatus');
         statusDiv.title = `Ваш ID: ${userId}`;
     </script>
